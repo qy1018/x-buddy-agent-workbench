@@ -1,213 +1,72 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight,
-  Bell,
-  BookOpen,
-  CheckCircle,
-  ClipboardText,
-  Clock,
-  Database,
-  FileText,
-  Gear,
-  ListChecks,
-  Plus,
-  SealCheck,
-  WarningCircle,
-  X,
-} from "@phosphor-icons/react";
+import { ArrowRight, ArrowUp, BookOpen, CaretLeft, CaretRight, ChartLine, CheckCircle, Circle, Clock, Database, FileText, Globe, ListChecks, MagnifyingGlass, Paperclip, PauseCircle, Plus, SealCheck, Sparkle, WarningCircle } from "@phosphor-icons/react";
 
-const steps = [
-  ["定义问题", "明确研究范围与证伪条件"],
-  ["收集证据", "公司披露、产业数据与宏观线索"],
-  ["分析验证", "交叉核对趋势与口径"],
-  ["形成结论", "区分事实、推断与不确定性"],
-  ["研究复核", "检查反证、风险与来源"],
+const taskSteps = ["梳理研究范围与证伪条件", "采集公司库存与周转原始披露", "采集产业销售额与库存价格信号", "交叉验证机构与行业协会判断", "撰写结构化研究报告并交付"];
+const phaseProgress = { plan: 0, "collecting-1": 1, "collecting-2": 2, recovery: 2, checkpoint: 4, memo: 5, paused: 2 };
+const evidenceItems = [
+  ["WSTS 产业月报", "全球销售额与库存指数", "产业统计 · 2026-09-20 08:16", "库存去化方向与销售额变化"],
+  ["公司公开披露", "库存天数与出货字段", "财报与电话会 · 2026-09-20 08:03", "台积电、三星等管理层原文"],
+  ["TechInsights", "渠道库存交叉验证", "备用来源 · 2026-09-20 09:46", "OTIX 超时后的许可替代源"],
+  ["终端需求跟踪", "PC、手机与工业分项", "行业宽度 · 2026-09-20 09:51", "用于识别反方证据与需求缺口"],
 ];
 
-const evidence = [
-  { id: 1, title: "全球半导体销售与库存追踪", source: "WSTS 产业月报", time: "2026-09-20 08:03", kind: "事实", fresh: "新鲜", excerpt: "主要细分领域的库存天数连续四个季度下降；存储与逻辑环节的降幅较为明显。", note: "统计口径：覆盖 17 家全球主要半导体公司；库存天数为期末库存除以近三个月日均销售额。" },
-  { id: 2, title: "Q2 业绩电话会：库存与出货", source: "台积电、三星电子公开材料", time: "2026-09-19 18:41", kind: "事实", fresh: "新鲜", excerpt: "部分公司披露渠道库存去化、订单能见度改善；不同产品线恢复节奏并不一致。", note: "原始披露文档已归档；提取字段包括库存、出货、资本开支及管理层展望。" },
-  { id: 3, title: "下游补库出现早期信号", source: "渠道与终端需求交叉验证", time: "2026-09-20 09:12", kind: "推断", fresh: "新鲜", excerpt: "渠道回补与订单改善共同出现，支持库存接近阶段性底部的推断，但尚未构成完整验证。", note: "该条为推断，依据两份公开披露与一项产业统计；不等同于对价格或收益的预测。" },
-  { id: 4, title: "终端需求的持续性仍待确认", source: "PC、手机与工业需求跟踪", time: "2026-09-18 16:20", kind: "不确定", fresh: "较早", excerpt: "消费电子终端仍分化，若需求未持续回升，库存改善可能仅是短期补库。", note: "存在来源时效差异；该风险项将在下一检查点重新验证。" },
-];
-
-const agentRuns = [
-  ["09:12", "研究目标已创建", "planner"],
-  ["09:16", "已生成 5 步研究计划", "planner"],
-  ["09:24", "完成主数据源采集 · 6 条证据", "tool"],
-  ["09:38", "OTIX 渠道接口超时，切换备用源", "warning"],
-  ["09:46", "完成口径交叉验证", "tool"],
-  ["10:02", "等待用户审批下一阶段", "approval"],
-];
+function PhaseIcon({ state }) { if (state === "done") return <CheckCircle weight="fill" />; if (state === "active") return <Circle weight="fill" />; if (state === "warning") return <WarningCircle weight="fill" />; return <Circle />; }
 
 function TrendCanvas() {
   const ref = useRef(null);
   useEffect(() => {
-    const canvas = ref.current;
-    const ctx = canvas.getContext("2d");
-    const ratio = window.devicePixelRatio || 1;
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    canvas.width = width * ratio;
-    canvas.height = height * ratio;
-    ctx.scale(ratio, ratio);
-    ctx.clearRect(0, 0, width, height);
-    ctx.strokeStyle = "#e8e6e1";
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 4; i += 1) {
-      const y = 16 + i * ((height - 38) / 3);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-    }
-    const values = [31, 36, 43, 49, 57, 53, 45, 40, 34, 30, 28, 29, 27, 28];
-    const max = 60; const min = 20;
-    ctx.strokeStyle = "#1f5b9a";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    values.forEach((value, index) => {
-      const x = (index / (values.length - 1)) * width;
-      const y = 12 + (1 - (value - min) / (max - min)) * (height - 36);
-      index ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-    });
-    ctx.stroke();
-    values.forEach((value, index) => {
-      const x = (index / (values.length - 1)) * width;
-      const y = 12 + (1 - (value - min) / (max - min)) * (height - 36);
-      ctx.fillStyle = index === values.length - 1 ? "#bb4e2e" : "#1f5b9a";
-      ctx.beginPath(); ctx.arc(x, y, index === values.length - 1 ? 4 : 2.6, 0, Math.PI * 2); ctx.fill();
-    });
+    const canvas = ref.current; const ctx = canvas.getContext("2d"); const ratio = window.devicePixelRatio || 1; const width = canvas.clientWidth; const height = canvas.clientHeight;
+    canvas.width = width * ratio; canvas.height = height * ratio; ctx.scale(ratio, ratio); ctx.clearRect(0, 0, width, height);
+    ctx.strokeStyle = "#e3e4e3"; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i += 1) { const y = 15 + i * ((height - 31) / 3); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+    const values = [45, 52, 60, 68, 81, 76, 65, 58, 49, 43, 39, 41, 37, 40]; const max = 90; const min = 30;
+    ctx.strokeStyle = "#1f5b9a"; ctx.lineWidth = 2.5; ctx.beginPath();
+    values.forEach((value, index) => { const x = (index / (values.length - 1)) * width; const y = 10 + (1 - (value - min) / (max - min)) * (height - 28); index ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+    values.forEach((value, index) => { const x = (index / (values.length - 1)) * width; const y = 10 + (1 - (value - min) / (max - min)) * (height - 28); ctx.fillStyle = index === values.length - 1 ? "#bb4e2e" : "#1f5b9a"; ctx.beginPath(); ctx.arc(x, y, index === values.length - 1 ? 4 : 2.5, 0, Math.PI * 2); ctx.fill(); });
   }, []);
-  return <canvas className="trend-canvas" ref={ref} aria-label="半导体库存指数趋势图" />;
+  return <canvas className="trend-canvas" ref={ref} aria-label="全球半导体库存指数趋势图" />;
 }
 
-function Badge({ children, type }) {
-  return <span className={`badge badge-${type}`}>{children}</span>;
+function TaskMonitor({ phase, collapsed, onToggle }) {
+  const progress = phaseProgress[phase] ?? 0;
+  const isWorking = phase === "collecting-1" || phase === "collecting-2";
+  const isRecovery = phase === "recovery";
+  const products = phase === "memo" ? [{ icon: <FileText weight="fill" />, title: "研究结果与证据摘要", meta: "研究稿已生成 · 已归档" }, { icon: <ChartLine weight="fill" />, title: "库存指数趋势图", meta: "4 个来源交叉核验" }] : phase === "checkpoint" ? [{ icon: <Database weight="fill" />, title: "原始证据账本", meta: "4 条记录 · 待形成结论" }, { icon: <FileText weight="fill" />, title: "反方证据与缺口", meta: "需求持续性待确认" }] : phase === "recovery" || phase === "paused" ? [{ icon: <WarningCircle weight="fill" />, title: "OTIX 调用异常记录", meta: "已保存失败响应与上下文" }, { icon: <Database weight="fill" />, title: "采集检查点", meta: "2 条原始证据已入账" }] : progress > 0 ? [{ icon: <Database weight="fill" />, title: "原始证据片段", meta: "2 条已入账 · 未形成结论" }, { icon: <FileText weight="fill" />, title: "字段口径说明", meta: "库存、出货、资本开支" }] : [{ icon: <FileText weight="fill" />, title: "研究计划草案", meta: "范围、工具与预算待确认" }];
+  if (collapsed) return <button className="monitor-tab" onClick={onToggle} aria-label="展开任务进程"><ListChecks size={18} /><span>任务进程</span><CaretLeft size={15} /></button>;
+  return <aside className="task-monitor"><div className="monitor-title"><div><span>AGENT HARNESS</span><h2>任务进程</h2></div><button onClick={onToggle} aria-label="收起任务进程"><CaretRight size={18} /></button></div>
+    <section className="monitor-section"><h3>待办</h3><div className="task-list">{taskSteps.map((task, index) => { const state = index < progress ? "done" : index === progress && progress < taskSteps.length ? (isRecovery && index === 2 ? "warning" : "active") : "todo"; return <div className={`task-line ${state}`} key={task}><PhaseIcon state={state} /><span>{task}</span></div>; })}</div></section>
+    <section className="monitor-section"><h3>产物</h3>{products.map((item) => <button className="product-row" key={item.title}><span>{item.icon}</span><div><strong>{item.title}</strong><small>{item.meta}</small></div><ArrowRight size={14} /></button>)}</section>
+    <section className="monitor-section tools-section"><h3>工具与 MCP</h3><div className="tool-row"><Database size={17} /><span>扶摇行情与估值</span><i className={isWorking ? "online" : ""} /></div><div className="tool-row"><FileText size={17} /><span>公告与财报解析</span><i className={progress >= 1 ? "online" : ""} /></div><div className="tool-row"><Globe size={17} /><span>产业数据检索</span><i className={progress >= 2 ? "online" : ""} /></div>{phase === "recovery" && <div className="tool-warning"><WarningCircle weight="fill" />OTIX 超时，等待人工选择备用源</div>}</section>
+  </aside>;
+}
+
+function Composer({ value, onChange, onSubmit, welcome, disabled }) {
+  return <form className={`composer ${welcome ? "composer-hero" : ""}`} onSubmit={onSubmit}><textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={welcome ? "输入研究目标，例如：验证半导体库存周期是否触底" : "补充研究要求，或输入 / 调用技能"} rows={welcome ? 3 : 2} disabled={disabled} autoFocus={welcome} /><div className="composer-actions"><div><button type="button" aria-label="添加附件"><Plus size={20} /></button><button type="button" aria-label="添加来源"><Paperclip size={19} /></button><span><SealCheck size={15} />默认权限</span></div><div><span className="advanced">深度研究</span><button className="send-button" type="submit" aria-label="发送研究目标" disabled={disabled || !value.trim()}><ArrowUp size={19} weight="bold" /></button></div></div></form>;
+}
+
+function MemoryPanel({ onNotice }) {
+  return <section className="memory-panel"><div className="memory-intro"><BookOpen size={20} /><div><strong>长期记忆</strong><p>仅保存经你确认的研究偏好、方法与待验证假设。</p></div></div><button onClick={() => onNotice("已打开：半导体研究方法论。该方法将在后续相似研究中作为计划模板。")}>半导体研究方法论 <ArrowRight size={14} /></button><button onClick={() => onNotice("已打开：可信来源偏好。当前优先使用公司披露、产业协会与许可数据源。")}>可信来源偏好 <ArrowRight size={14} /></button><button onClick={() => onNotice("已打开：待验证假设。系统将持续跟踪终端需求对库存改善的确认作用。")}>待验证假设 <ArrowRight size={14} /></button></section>;
 }
 
 function App() {
-  const [selectedEvidence, setSelectedEvidence] = useState(evidence[0]);
-  const [showRuns, setShowRuns] = useState(false);
-  const [showNewResearch, setShowNewResearch] = useState(false);
-  const [showApproval, setShowApproval] = useState(false);
-  const [mission, setMission] = useState("验证半导体库存周期是否触底");
-  const [approved, setApproved] = useState(false);
-  const [toast, setToast] = useState("");
-  const [goalDraft, setGoalDraft] = useState("");
-
-  const notify = (message) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 2800);
-  };
-
-  const createResearch = (event) => {
-    event.preventDefault();
-    if (!goalDraft.trim()) return;
-    setMission(goalDraft.trim());
-    setShowNewResearch(false);
-    setGoalDraft("");
-    setApproved(false);
-    notify("研究任务已创建，Agent 已保存第一处检查点。");
-  };
-
-  const approve = () => {
-    setShowApproval(false);
-    setApproved(true);
-    notify("已批准：Agent 正在基于已核验来源生成研究备忘录。");
-  };
-
-  return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">X</span><span>XBuddy</span></div>
-        <p className="brand-subtitle">研究清晰，判断有据</p>
-        <button className="new-research" onClick={() => setShowNewResearch(true)}><Plus size={17} weight="bold" />新建研究</button>
-
-        <div className="side-heading">研究进程</div>
-        <nav className="stage-nav" aria-label="研究阶段">
-          {steps.map(([title, sub], index) => (
-            <button className={`stage ${index === 2 && !approved ? "active" : ""} ${index < 2 || approved ? "done" : ""}`} key={title} onClick={() => notify(`${title}：${sub}`)}>
-              <span className="stage-dot">{index < 2 || approved ? <CheckCircle size={16} weight="fill" /> : index + 1}</span>
-              <span><strong>{title}</strong><small>{sub}</small></span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="side-divider" />
-        <div className="side-heading">长期记忆</div>
-        <button className="memory-row" onClick={() => notify("已打开：半导体研究方法论")}> <BookOpen size={17} />半导体研究方法论</button>
-        <button className="memory-row" onClick={() => notify("已打开：已保存的来源偏好")}> <SealCheck size={17} />可信来源偏好</button>
-        <button className="memory-row" onClick={() => notify("已打开：待验证的历史假设")}> <Clock size={17} />待验证假设</button>
-        <div className="side-bottom"><button onClick={() => notify("设置面板将在完整版本中提供")}> <Gear size={18} />设置</button></div>
-      </aside>
-
-      <section className="workspace">
-        <header className="topbar">
-          <div className="crumb"><span className="live-dot" />研究任务 · 自动保存于 2026-09-20 10:02</div>
-          <div className="top-actions"><button aria-label="通知" onClick={() => notify("没有新的研究提醒")}><Bell size={19} /></button><span className="avatar">林</span><span className="user-name">林研究员</span></div>
-        </header>
-
-        <div className="content-grid">
-          <section className="main-column">
-            <div className="eyebrow">RESEARCH MISSION</div>
-            <h1>{mission}</h1>
-            <p className="mission-copy">基于公司披露、产业数据与需求信号，验证库存是否已出现阶段性拐点；本研究仅提供信息与分析，不构成投资建议。</p>
-            <div className="tags"><span>半导体</span><span>库存周期</span><span>供需验证</span><span>公开来源</span></div>
-
-            <section className="finding-panel">
-              <div className="section-kicker">当前研究发现 <span>更新于 10:02</span></div>
-              <div className="finding-quote">
-                <span className="quote-bar" />
-                <div><h2>{approved ? "已形成初步研究备忘录，仍需持续验证。" : "库存拐点出现早期信号，但确认条件尚不充分。"}</h2><p>库存去化与局部补库同时出现，支持“接近阶段性底部”的研究推断；但终端需求分化，尚不足以确认持续复苏。</p></div>
-              </div>
-              <div className="fact-grid">
-                <div><Badge type="fact">已验证事实</Badge><p>主要公司库存天数连续下降，多个来源的方向一致。</p></div>
-                <div><Badge type="inference">研究推断</Badge><p>库存可能接近阶段性底部，尚需需求端继续印证。</p></div>
-                <div><Badge type="uncertain">尚不确定</Badge><p>消费电子需求的可持续性与库存改善节奏。</p></div>
-              </div>
-            </section>
-
-            <section className="trend-section">
-              <div className="section-heading"><div><h2>全球半导体库存指数</h2><p>指数化展示（2023 Q1 = 100），用于趋势观察，不代表价格预测</p></div><Badge type="source">4 个来源已交叉核验</Badge></div>
-              <TrendCanvas />
-              <div className="chart-footer"><span>2023 Q1</span><span>2024 Q1</span><span>2025 Q1</span><span>2026 Q3</span></div>
-              <div className="chart-source">来源：公司公开披露、WSTS 产业数据；更新于 2026-09-20 09:46 · 口径说明见各证据卡。</div>
-            </section>
-
-            <section className="trail-section">
-              <div className="section-heading"><div><h2>证据链</h2><p>每一项结论均可返回原始字段或原文。</p></div><button className="text-button" onClick={() => setShowRuns(true)}><ListChecks size={17} />查看 Agent 运行记录</button></div>
-              <div className="trail">
-                {evidence.slice(0, 3).map((item, index) => <button key={item.id} className={`trail-card ${selectedEvidence.id === item.id ? "selected" : ""}`} onClick={() => setSelectedEvidence(item)}><Badge type={item.kind === "事实" ? "fact" : "inference"}>{item.kind}</Badge><strong>{item.title}</strong><p>{item.excerpt}</p><small><FileText size={14} />{item.source} · {item.time}</small>{index < 2 && <span className="trail-arrow"><ArrowRight size={17} /></span>}</button>)}
-              </div>
-            </section>
-          </section>
-
-          <aside className="inspector">
-            <div className="inspector-head"><div><span className="eyebrow">EVIDENCE INSPECTOR</span><h2>证据详情</h2></div><button aria-label="查看运行记录" onClick={() => setShowRuns(true)}><ListChecks size={20} /></button></div>
-            <div className="source-card">
-              <div className="source-icon"><FileText size={24} weight="fill" /></div>
-              <Badge type={selectedEvidence.kind === "事实" ? "fact" : selectedEvidence.kind === "推断" ? "inference" : "uncertain"}>{selectedEvidence.kind}</Badge>
-              <h3>{selectedEvidence.title}</h3>
-              <p className="source-name">{selectedEvidence.source}</p>
-              <div className="meta-list"><span><Clock size={16} />获取时间</span><b>{selectedEvidence.time}</b><span><Database size={16} />新鲜度</span><b>{selectedEvidence.fresh}</b><span><SealCheck size={16} />来源状态</span><b className="verified">已核验</b></div>
-              <blockquote>{selectedEvidence.excerpt}</blockquote>
-              <p className="method-note">{selectedEvidence.note}</p>
-              <button className="source-link" onClick={() => notify("原始证据链接已记录在审计日志中")}>查看来源与字段 <ArrowRight size={16} /></button>
-            </div>
-
-            <div className="checkpoint-card"><div className="checkpoint-title"><span className="checkpoint-icon"><ClipboardText size={19} weight="fill" /></span><div><strong>用户检查点</strong><p>在形成正式备忘录前复核范围与反证。</p></div></div>{approved ? <div className="approved-state"><CheckCircle size={21} weight="fill" />已批准继续形成备忘录</div> : <button className="primary-button" onClick={() => setShowApproval(true)}>审阅并批准下一阶段 <ArrowRight size={18} /></button>}</div>
-
-            <button className="recovery-card" onClick={() => setShowRuns(true)}><WarningCircle size={22} weight="fill" /><span><strong>1 项调用已恢复</strong><small>OTIX 渠道接口超时，已切换备用来源；原始失败记录已保留。</small></span><ArrowRight size={17} /></button>
-          </aside>
-        </div>
-      </section>
-
-      {showRuns && <div className="drawer-backdrop" onClick={() => setShowRuns(false)}><aside className="run-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">AGENT HARNESS</span><h2>运行记录与恢复</h2></div><button onClick={() => setShowRuns(false)} aria-label="关闭"><X size={21} /></button></div><div className="run-summary"><span className="live-dot" />本次研究已保存 3 个检查点 · 预计成本 ¥1.84 · 运行 50 分钟</div><div className="run-list">{agentRuns.map(([time, text, status]) => <div className={`run-item ${status}`} key={time}><span>{time}</span><i /><p>{text}</p></div>)}</div><div className="recovery-detail"><WarningCircle size={21} weight="fill" /><div><strong>恢复策略：备用来源已启用</strong><p>OTIX 渠道库存接口在 60 秒后超时。系统未将缺失数据当作正常结果，而是标记缺口、转用已许可的 TechInsights 备用来源，并计划在下一个交易日重试主源。</p></div></div></aside></div>}
-
-      {showApproval && <div className="modal-backdrop" onClick={() => setShowApproval(false)}><section className="modal" onClick={(event) => event.stopPropagation()}><button className="close-button" onClick={() => setShowApproval(false)} aria-label="关闭"><X size={20} /></button><span className="eyebrow">CHECKPOINT REVIEW</span><h2>是否批准进入结论阶段？</h2><p>Agent 将基于已核验的 4 个来源撰写研究备忘录，并保留未解决的需求端不确定性。</p><div className="approval-list"><span><CheckCircle size={18} weight="fill" />主数据源与备用来源均已记录</span><span><CheckCircle size={18} weight="fill" />反方证据将写入风险段落</span><span><WarningCircle size={18} weight="fill" />不生成买卖建议或收益承诺</span></div><div className="modal-actions"><button className="secondary-button" onClick={() => setShowApproval(false)}>返回继续核验</button><button className="primary-button" onClick={approve}>批准并生成备忘录 <ArrowRight size={18} /></button></div></section></div>}
-
-      {showNewResearch && <div className="modal-backdrop" onClick={() => setShowNewResearch(false)}><form className="modal" onSubmit={createResearch} onClick={(event) => event.stopPropagation()}><button type="button" className="close-button" onClick={() => setShowNewResearch(false)} aria-label="关闭"><X size={20} /></button><span className="eyebrow">NEW RESEARCH</span><h2>提出一个研究目标</h2><p>描述你想验证的问题；XBuddy 将先给出可编辑计划，并在高影响节点请求确认。</p><label htmlFor="research-goal">研究目标</label><textarea id="research-goal" value={goalDraft} onChange={(event) => setGoalDraft(event.target.value)} placeholder="例如：验证高股息策略在利率下行阶段的稳定性" autoFocus /><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setShowNewResearch(false)}>取消</button><button className="primary-button" type="submit">创建研究计划 <ArrowRight size={18} /></button></div></form></div>}
-      {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
-    </main>
-  );
+  const [phase, setPhase] = useState("welcome"); const [goal, setGoal] = useState(""); const [draft, setDraft] = useState(""); const [monitorCollapsed, setMonitorCollapsed] = useState(false); const [notice, setNotice] = useState(""); const [railTab, setRailTab] = useState("task"); const [showEvidence, setShowEvidence] = useState(false); const hasTask = phase !== "welcome";
+  const createResearch = (event) => { event.preventDefault(); if (!draft.trim()) return; setGoal(draft.trim()); setDraft(""); setPhase("plan"); setMonitorCollapsed(false); setShowEvidence(false); };
+  const startNew = () => { setGoal(""); setDraft(""); setPhase("welcome"); setMonitorCollapsed(false); setNotice(""); setShowEvidence(false); };
+  const addNote = (event) => { event.preventDefault(); if (!draft.trim()) return; setNotice("补充要求已写入当前研究线程，Agent 会在下一检查点纳入处理。"); setDraft(""); };
+  return <main className="office-shell">
+    <aside className="left-rail"><div className="rail-utilities"><button aria-label="收起左栏"><CaretLeft size={18} /></button><button aria-label="搜索"><MagnifyingGlass size={19} /></button></div><div className="brand-name"><span><Sparkle size={17} weight="fill" /></span>XBuddy</div><p className="brand-subtitle">研究清晰，判断有据</p><button className="rail-primary" onClick={startNew}><Plus size={18} />新建研究</button><nav className="rail-nav" aria-label="主导航"><button><Sparkle size={19} />研究助手</button><button><Database size={19} />工具与数据</button><button><Clock size={19} />定时跟踪</button><button><Globe size={19} />研究网页</button></nav><div className="rail-tabs"><button className={railTab === "task" ? "selected" : ""} onClick={() => setRailTab("task")}>任务</button><button className={railTab === "memory" ? "selected" : ""} onClick={() => setRailTab("memory")}>长期记忆</button></div>{railTab === "task" ? <><div className="project-box"><p>管理研究项目，沉淀可复用的方法与证据</p><button onClick={startNew}><Plus size={16} />新建项目</button></div><div className="recent-title">最近研究</div>{hasTask ? <button className="recent-item"><span>{goal}</span><i className={phase === "memo" ? "complete" : ""} /></button> : <p className="recent-empty">尚无研究任务。从一个问题开始。</p>}</> : <MemoryPanel onNotice={setNotice} />}<div className="rail-user"><span className="user-avatar">林</span><div><strong>林研究员</strong><small>个人研究版</small></div></div></aside>
+    <section className={`chat-area ${hasTask ? "has-task" : ""}`}>
+      {!hasTask ? <div className="welcome-screen"><div className="welcome-spark"><Sparkle size={31} weight="fill" /></div><h1>开始一项研究</h1><p>告诉 XBuddy 你想验证什么。我们会先规划路径，再基于可回溯的证据形成结果。</p><div className="welcome-examples"><span>半导体库存周期</span><span>高股息策略</span><span>行业景气验证</span></div><Composer value={draft} onChange={setDraft} onSubmit={createResearch} welcome /></div> : <><header className="conversation-header"><strong>{goal}</strong><span>自动保存 · 研究线程</span></header><div className="conversation-scroll"><div className="user-message">{goal}</div><div className="agent-turn"><div className="agent-label"><Sparkle size={17} weight="fill" />XBuddy 研究助手</div>
+        {phase === "plan" && <div className="agent-content"><p>我已将目标转换为可核验的研究问题：先检查库存和出货的变化，再确认需求端是否支持同一方向，最后明确哪些条件仍不足以得出结论。</p><div className="plan-message">{taskSteps.map((task, index) => <div key={task}><span>{index + 1}</span><div><strong>{task}</strong><small>{["范围：全球主要半导体公司；设定需求未回升为证伪条件。", "字段：库存天数、出货、订单能见度与资本开支。", "口径：产业月报、库存指数与价格/需求分项。", "对照：公司披露、产业协会与渠道数据的相同口径。", "输出：事实、推断、反方证据与后续跟踪项。"][index]}</small></div></div>)}</div><div className="inline-meta"><span><Database size={15} />3 个已注册工具</span><span><SealCheck size={15} />公开数据权限</span><span>预算上限 ¥1.84</span><span>预计 8–12 分钟</span></div><button className="chat-primary" onClick={() => setPhase("collecting-1")}>确认计划并开始 <ArrowRight size={16} /></button></div>}
+        {phase === "collecting-1" && <div className="agent-content"><p>计划已确认。任务 1 将读取公司披露中的库存天数、周转天数、出货、订单能见度与管理层展望；所有返回先作为原始字段入账。</p><div className="research-context"><span><strong>研究范围</strong>全球存储与逻辑主要公司</span><span><strong>当前上下文</strong>1 / 5 任务 · 0 / ¥1.84</span><span><strong>质量规则</strong>不以单一来源生成结论</span></div><div className="live-action"><span><Circle weight="fill" />等待启动工具调用</span><button onClick={() => setPhase("collecting-2")}>执行采集 <ArrowRight size={15} /></button></div><div className="process-log"><span><Database size={15} />已就绪：扶摇行情、公告与财报解析</span><span><FileText size={15} />将保存原始字段，不生成结论</span><span><Clock size={15} />检查点：采集完成后自动保存</span></div></div>}
+        {phase === "collecting-2" && <div className="agent-content"><p>基础采集完成，2 条原始证据已归档。它们说明“库存与出货正在变化”，但不足以单独解释周期位置；下一步需要用行业数据和渠道口径交叉验证。</p><div className="evidence-snippets"><div><FileText size={18} /><span><strong>公司库存与出货字段</strong><small>公开披露 · 2026-09-20 08:03 · 库存、出货、资本开支、管理层展望已归档</small></span></div><div><Database size={18} /><span><strong>全球产业月度数据</strong><small>WSTS · 2026-09-20 08:16 · 销售额、库存指数与产品结构字段已归档</small></span></div></div><div className="field-summary"><span>可用字段 14</span><span>来源 2</span><span>冲突 0</span><span>待验证：渠道库存与终端需求</span></div><div className="live-action"><span><Circle weight="fill" />等待交叉验证</span><button onClick={() => setPhase("recovery")}>执行验证 <ArrowRight size={15} /></button></div></div>}
+        {phase === "recovery" && <div className="agent-content"><p>交叉验证时，OTIX 渠道库存接口在 60 秒后超时。该缺口会影响“渠道补库”这一线索的可信度，因此系统不会静默跳过，也不会据此提前形成研究结论。</p><div className="approval-message"><WarningCircle size={20} weight="fill" /><div><strong>需要你确认备用数据源</strong><small>TechInsights 覆盖同类渠道维度，预计增加 ¥0.24 成本；系统将保留 OTIX 的失败响应、调用成本与下一交易日重试计划。</small></div></div><div className="recovery-details"><span>已保存：2 条证据</span><span>异常：OTIX timeout</span><span>建议：启用许可备用源</span></div><div className="action-row"><button className="chat-primary" onClick={() => setPhase("checkpoint")}>批准备用源 <ArrowRight size={16} /></button><button className="chat-secondary" onClick={() => setPhase("paused")}><PauseCircle size={16} />保存并暂停</button></div></div>}
+        {phase === "paused" && <div className="agent-content"><p>研究已暂停。当前任务、原始证据、上下文摘要、预算使用情况和异常记录都已保存到检查点；未确认的推断不会写入长期记忆。</p><div className="paused-summary"><span>检查点 #2</span><span>已归档 2 条证据</span><span>累计成本 ¥0.76</span></div><button className="chat-primary" onClick={() => setPhase("checkpoint")}>从检查点继续 <ArrowRight size={16} /></button></div>}
+        {phase === "checkpoint" && <div className="agent-content"><p>证据收集与交叉验证已完成。Agent 已把 4 项来源、1 项已恢复的工具异常、2 条支持线索和 1 条反方证据写入研究线程。结论、图表与报告尚未生成，等待你的复核。</p><div className="checkpoint-message"><SealCheck size={19} weight="fill" /><span><strong>检查点 #3 已保存</strong><small>证据覆盖：公司披露、产业统计、渠道与终端需求。反方证据：消费电子需求持续性仍待确认。</small></span></div><div className="checkpoint-metrics"><span><strong>4</strong> 已核验来源</span><span><strong>1</strong> 已恢复异常</span><span><strong>¥1.84</strong> 累计成本</span></div><button className="chat-primary" onClick={() => setPhase("memo")}>批准并生成研究报告 <ArrowRight size={16} /></button></div>}
+        {phase === "memo" && <div className="agent-content final-content"><p>研究已完成。以下结果基于已核验来源，不构成投资建议；数值为 Demo 模拟数据，用于展示证据与结论如何关联。</p><section className="final-report"><div className="result-label">研究结果 <span>生成于 10:11</span></div><div className="result-signal"><i /><div><h2>库存拐点出现早期信号，但确认条件尚不充分。</h2><p>库存去化与局部补库同时出现，支持“接近阶段性底部”的研究推断；终端需求分化，尚不足以确认持续复苏。</p></div></div><div className="conclusion-grid"><div><em>已验证事实</em><p>主要公司库存天数连续下降，多个公开来源方向一致。</p></div><div><em>研究推断</em><p>库存可能接近阶段性底部，尚需需求端继续印证。</p></div><div><em>尚不确定</em><p>消费电子需求的持续性与库存改善节奏。</p></div></div><section className="chart-section"><div><h3>全球半导体库存指数</h3><p>指数化展示（2023 Q1 = 100），用于趋势观察，不代表价格预测。</p></div><TrendCanvas /><div className="chart-axis"><span>2023 Q1</span><span>2024 Q1</span><span>2025 Q1</span><span>2026 Q3</span></div><small>来源：公司公开披露、WSTS 产业数据与许可渠道数据；口径说明可回溯至证据链。</small></section><section className="report-detail"><h3>研究展开</h3><p><strong>库存与供给：</strong>主要公司库存天数连续下降，部分存储与逻辑环节的去化速度快于其他产品线；资本开支与产能利用率仍显示结构分化。</p><p><strong>需求与价格：</strong>行业销售额改善与局部补库方向一致，但消费电子终端需求仍存在波动。研究结论因此保持为“早期信号”，而非持续复苏确认。</p><p><strong>后续验证：</strong>下一检查点将跟踪渠道库存、终端出货与订单能见度；若需求端未同步改善，应下调当前推断的置信度。</p></section><div className="result-evidence"><SealCheck size={16} weight="fill" /><span>4 个来源已交叉核验</span><button onClick={() => setShowEvidence((value) => !value)}>{showEvidence ? "收起证据链" : "查看证据链"} <ArrowRight size={14} /></button></div>{showEvidence && <section className="evidence-chain"><h3>可验证证据链</h3>{evidenceItems.map(([source, title, meta, detail], index) => <div key={source}><span>{index + 1}</span><article><strong>{title}</strong><small>{source} · {meta}</small><p>{detail}</p></article></div>)}</section>}</section><div className="answer-actions"><button onClick={() => setNotice("研究结果已复制到剪贴板模拟区。")}>复制结果</button><button onClick={() => setNotice("研究结果已保存至研究档案，长期记忆仅记录经确认的方法与假设。")}>保存至研究档案</button><span>2m 59s</span></div></div>}
+      </div></div>{notice && <div className="thread-notice"><SealCheck size={16} weight="fill" />{notice}</div>}<Composer value={draft} onChange={setDraft} onSubmit={addNote} /></>}
+    </section>{hasTask && <TaskMonitor phase={phase} collapsed={monitorCollapsed} onToggle={() => setMonitorCollapsed((value) => !value)} />}
+  </main>;
 }
 
 export { App };
